@@ -89,7 +89,6 @@ const applyV1 = (db) => {
       name            TEXT NOT NULL,
       category_id     TEXT REFERENCES categories(id),
       quantity        INTEGER NOT NULL DEFAULT 0,
-      available_count INTEGER NOT NULL DEFAULT 0,
       condition       TEXT CHECK(condition IN ('Good','Fair','Poor','Damaged')),
       serial_number   TEXT,
       asset_tag       TEXT,

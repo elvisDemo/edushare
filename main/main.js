@@ -8,6 +8,10 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const { initDatabase, closeDatabase } = require('./database/db');
 
+// Import IPC handlers
+require('./ipc/inventory.ipc');
+require('./ipc/loans.ipc');
+
 let mainWindow;
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 

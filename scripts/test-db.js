@@ -57,7 +57,7 @@ try {
   // Test foreign key enforcement
   try {
     db.prepare(
-      "INSERT INTO items (id, name, category_id, quantity, available_count) VALUES ('test-id', 'Test Item', 'nonexistent-cat', 1, 1)"
+      "INSERT INTO items (id, name, category_id, quantity) VALUES ('test-id', 'Test Item', 'nonexistent-cat', 1)"
     ).run();
     console.error('❌ Foreign key constraint NOT enforced');
     process.exit(1);
