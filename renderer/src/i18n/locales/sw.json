@@ -1,0 +1,56 @@
+{
+  "login": {
+    "title": "Ingia kwenye akaunti yako",
+    "username": "Jina la mtumiaji",
+    "password": "Nenosiri",
+    "signIn": "Ingia",
+    "signingIn": "Inaanza kuingia...",
+    "forgotPassword": "Umesahau nenosiri?",
+    "recoverAccess": "Rudisha upatikanaji",
+    "needHelp": "Unahitaji usaidizi? Wasiliana na msimamizi wa mfumo wako.",
+    "systemName": "Mfumo wa Usimamizi wa Mali ya Shule",
+    "version": "EduShare v1.0 • Usimamizi wa Mali ya Shule",
+    "usernamePlaceholder": "Weka jina la mtumiaji",
+    "passwordPlaceholder": "Weka nenosiri",
+    "errors": {
+      "invalidCredentials": "Jina la mtumiaji au nenosiri si sahihi",
+      "networkError": "Hitilafu ya mtandao. Tafadhali angalia muunganisho wako.",
+      "serverError": "Hitilafu ya seva. Tafadhali jaribu tena baadaye.",
+      "usernameLength": "Jina la mtumiaji lazima liwe kati ya herufi 3 na 50",
+      "passwordLength": "Nenosiri lazima liwe angalau herufi 8",
+      "required": "Sehemu hii inahitajika"
+    },
+    "validation": {
+      "usernameMin": "Jina la mtumiaji lazima liwe angalau herufi 3",
+      "usernameMax": "Jina la mtumiaji haliwezi kuzidi herufi 50",
+      "passwordMin": "Nenosiri lazima liwe angalau herufi 8"
+    }
+  },
+  "language": {
+    "en": "Kiingereza",
+    "sw": "Kiswahili",
+    "toggle": "Badilisha lugha"
+  },
+  "recovery": {
+    "title": "Rudisha Upatikanaji",
+    "description": "Ukimpoteza upatikanaji wa akaunti yako, unaweza kutumia faili yako ya kurejesha ili kuweka upya hati zako.",
+    "instructions": "Ili kurudisha upatikanaji:",
+    "step1": "Tafuta faili yako ya kurejesha (.esrec)",
+    "step2": "Bonyeza 'Chagua Faili' hapa chini",
+    "step3": "Chagua faili yako ya kurejesha",
+    "step4": "Fuata maelekezo kwenye skrini",
+    "noFile": "Huna faili ya kurejesha?",
+    "contactAdmin": "Wasiliana na msimamizi wa mfumo wako kwa usaidizi.",
+    "browse": "Vinjari...",
+    "cancel": "Ghairi",
+    "submit": "Rudisha Upatikanaji"
+  },
+  "common": {
+    "loading": "Inapakia...",
+    "error": "Hitilafu",
+    "success": "Imefanikiwa",
+    "close": "Funga",
+    "save": "Hifadhi",
+    "cancel": "Ghairi"
+  }
+}

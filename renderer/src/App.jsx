@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { I18nextProvider } from 'react-i18next'
 import SetupWizard from './pages/SetupWizard'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Settings from './pages/Settings'
 import { SettingsProvider } from './context/SettingsContext'
+import { LanguageProvider } from './context/LanguageContext'
+import i18n from './i18n'
 import './App.css'
 
 function App() {
@@ -45,29 +48,33 @@ function App() {
   }
 
   return (
-    <Router>
-      <SettingsProvider>
-        <Routes>
-          {/* Public routes */}
-          <Route path="/login" element={
-            isAuthenticated ? <Navigate to="/dashboard" /> : <Login onLogin={() => setIsAuthenticated(true)} />
-          } />
-          
-          {/* Protected routes */}
-          <Route path="/dashboard" element={
-            isAuthenticated ? <Dashboard /> : <Navigate to="/login" />
-          } />
-          <Route path="/settings" element={
-            isAuthenticated ? <Settings /> : <Navigate to="/login" />
-          } />
-          
-          {/* Default redirect */}
-          <Route path="/" element={
-            <Navigate to={isAuthenticated ? "/dashboard" : "/login"} />
-          } />
-        </Routes>
-      </SettingsProvider>
-    </Router>
+    <I18nextProvider i18n={i18n}>
+      <Router>
+        <SettingsProvider>
+          <LanguageProvider>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/login" element={
+                isAuthenticated ? <Navigate to="/dashboard" /> : <Login onLogin={() => setIsAuthenticated(true)} />
+              } />
+              
+              {/* Protected routes */}
+              <Route path="/dashboard" element={
+                isAuthenticated ? <Dashboard /> : <Navigate to="/login" />
+              } />
+              <Route path="/settings" element={
+                isAuthenticated ? <Settings /> : <Navigate to="/login" />
+              } />
+              
+              {/* Default redirect */}
+              <Route path="/" element={
+                <Navigate to={isAuthenticated ? "/dashboard" : "/login"} />
+              } />
+            </Routes>
+          </LanguageProvider>
+        </SettingsProvider>
+      </Router>
+    </I18nextProvider>
   )
 }
 
