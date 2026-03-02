@@ -15,9 +15,9 @@ const getInstallationId = () => {
 };
 
 const registerRecoveryHandlers = () => {
-  ipcMain.handle('recovery:generate', async () => {
+  ipcMain.handle('recovery:generate', async (event) => {
     try {
-      const { dialog } = require('electron');
+      const { dialog, BrowserWindow } = require('electron');
       const db = getDb();
       const installId = getInstallationId();
       const token = crypto.randomBytes(32).toString('hex');
@@ -35,7 +35,10 @@ const registerRecoveryHandlers = () => {
       const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
       db.prepare("INSERT INTO settings (key, value) VALUES ('recovery_token_hash', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(tokenHash);
 
-      const result = await dialog.showSaveDialog({
+      // Get the sender window for the dialog parent
+      const senderWindow = BrowserWindow.fromWebContents(event.sender);
+      
+      const result = await dialog.showSaveDialog(senderWindow, {
         title: 'Save Recovery File (save to USB)',
         defaultPath: 'EduShare_Recovery.esr',
         filters: [{ name: 'EduShare Recovery', extensions: ['esr'] }],

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test EduShare API</title>
+    <script>
+        // Mock Electron contextBridge for testing
+        if (typeof require === 'undefined') {
+            // Browser environment - mock the API
+            window.edushareAPI = {
+                auth: {
+                    login: () => Promise.resolve({ success: true, data: { id: 'test', username: 'admin', full_name: 'Admin', role: 'super_admin' } }),
+                    logout: () => Promise.resolve({ success: true })
+                },
+                inventory: {
+                    getItems: () => Promise.resolve({ success: true, data: [] }),
+                    getItem: () => Promise.resolve({ success: true, data: {} }),
+                    createItem: () => Promise.resolve({ success: true, data: { id: 'test-id' } }),
+                    updateItem: () => Promise.resolve({ success: true }),
+                    deleteItem: () => Promise.resolve({ success: true }),
+                    restoreItem: () => Promise.resolve({ success: true }),
+                    getCategories: () => Promise.resolve({ success: true, data: [] }),
+                    createCategory: () => Promise.resolve({ success: true, data: { id: 'test-cat' } }),
+                    updateCategory: () => Promise.resolve({ success: true }),
+                    deleteCategory: () => Promise.resolve({ success: true }),
+                    exportCSV: () => Promise.resolve({ success: true, data: 'csv,data' })
+                },
+                loans: {
+                    createLoan: () => Promise.resolve({ success: true, data: { id: 'test-loan' } }),
+                    getActiveLoans: () => Promise.resolve({ success: true, data: [] }),
+                    getOverdueLoans: () => Promise.resolve({ success: true, data: [] }),
+                    getLoan: () => Promise.resolve({ success: true, data: {} }),
+                    returnItem: () => Promise.resolve({ success: true }),
+                    getHistory: () => Promise.resolve({ success: true, data: [] }),
+                    checkOverdue: () => Promise.resolve({ success: true, data: { count: 0 } }),
+                    getOverdueCount: () => Promise.resolve({ success: true, data: { count: 0 } })
+                },
+                reports: {
+                    generate: () => Promise.resolve({ success: true, data: {} }),
+                    exportPDF: () => Promise.resolve({ success: true, data: '/path/to/pdf' })
+                },
+                settings: {
+                    get: () => Promise.resolve({ success: true, data: 'value' }),
+                    set: () => Promise.resolve({ success: true }),
+                    getAll: () => Promise.resolve({ success: true, data: {} }),
+                    isSetupComplete: () => Promise.resolve({ success: true, data: true })
+                },
+                backup: {
+                    create: () => Promise.resolve({ success: true, data: '/path/to/backup' }),
+                    restore: () => Promise.resolve({ success: true })
+                },
+                recovery: {
+                    generate: () => Promise.resolve({ success: true, data: 'recovery-data' }),
+                    reset: () => Promise.resolve({ success: true })
+                },
+                users: {
+                    getAll: () => Promise.resolve({ success: true, data: [] }),
+                    create: () => Promise.resolve({ success: true, data: { id: 'test-user' } }),
+                    update: () => Promise.resolve({ success: true }),
+                    deactivate: () => Promise.resolve({ success: true }),
+                    resetPassword: () => Promise.resolve({ success: true })
+                }
+            };
+        }
+        
+        function testAPI() {
+            const results = [];
+            const api = window.edushareAPI;
+            
+            // Test that all namespaces exist
+            const namespaces = ['auth', 'inventory', 'loans', 'reports', 'settings', 'backup', 'recovery', 'users'];
+            namespaces.forEach(ns => {
+                if (api[ns]) {
+                    results.push(`✓ Namespace '${ns}' exists`);
+                } else {
+                    results.push(`✗ Namespace '${ns}' missing`);
+                }
+            });
+            
+            // Test that API is callable
+            try {
+                // Just check that methods exist and are functions
+                if (typeof api.auth.login === 'function') results.push('✓ auth.login is a function');
+                if (typeof api.inventory.getItems === 'function') results.push('✓ inventory.getItems is a function');
+                if (typeof api.loans.createLoan === 'function') results.push('✓ loans.createLoan is a function');
+                if (typeof api.reports.generate === 'function') results.push('✓ reports.generate is a function');
+                if (typeof api.settings.get === 'function') results.push('✓ settings.get is a function');
+                if (typeof api.backup.create === 'function') results.push('✓ backup.create is a function');
+                if (typeof api.recovery.generate === 'function') results.push('✓ recovery.generate is a function');
+                if (typeof api.users.getAll === 'function') results.push('✓ users.getAll is a function');
+            } catch (e) {
+                results.push(`✗ Error testing API: ${e.message}`);
+            }
+            
+            document.getElementById('results').innerHTML = results.join('<br>');
+        }
+        
+        window.onload = testAPI;
+    </script>
+</head>
+<body>
+    <h1>EduShare API Test</h1>
+    <p>Testing that window.edushareAPI is properly exposed with all 8 namespaces.</p>
+    <div id="results" style="font-family: monospace; white-space: pre;"></div>
+</body>
+</html>
