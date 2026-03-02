@@ -1,23 +1,23 @@
 ﻿/**
- * schema.js — All CREATE TABLE statements for EduShare
- * 
+ * schema.js - All CREATE TABLE statements for EduShare
+ *
  * 7 tables:
- *   1. settings      — school branding + app config
- *   2. users         — staff accounts with roles
- *   3. categories    — custom item categories
- *   4. items         — inventory items
- *   5. loans         — active/overdue loan records
- *   6. returns       — return records
- *   7. audit_log     — immutable write history
- * 
- * ALL primary keys are UUID TEXT — never INTEGER AUTOINCREMENT.
+ *   1. settings      - school branding + app config
+ *   2. users         - staff accounts with roles
+ *   3. categories    - custom item categories
+ *   4. items         - inventory items
+ *   5. loans         - active/overdue loan records
+ *   6. returns       - return records
+ *   7. audit_log     - immutable write history
+ *
+ * ALL primary keys are UUID TEXT - never INTEGER AUTOINCREMENT.
  * Foreign key constraints are enforced (pragma foreign_keys = ON).
  */
 
 const MIGRATIONS = [
   {
     version: 1,
-    description: 'Initial schema — all 7 tables',
+    description: 'Initial schema - all 7 tables',
     sql: `
       CREATE TABLE IF NOT EXISTS settings (
         key         TEXT PRIMARY KEY,
@@ -120,9 +120,50 @@ const MIGRATIONS = [
   }
 ];
 
+  {
+    version: 2,
+    description: 'Performance indexes on all high-traffic columns',
+    sql: `
+      -- users
+      CREATE INDEX IF NOT EXISTS idx_users_username  ON users(username);
+      CREATE INDEX IF NOT EXISTS idx_users_role      ON users(role);
+      CREATE INDEX IF NOT EXISTS idx_users_is_active ON users(is_active);
+
+      -- categories
+      CREATE INDEX IF NOT EXISTS idx_categories_is_active ON categories(is_active);
+
+      -- items
+      CREATE INDEX IF NOT EXISTS idx_items_category_id ON items(category_id);
+      CREATE INDEX IF NOT EXISTS idx_items_is_active   ON items(is_active);
+      CREATE INDEX IF NOT EXISTS idx_items_name        ON items(name);
+      CREATE INDEX IF NOT EXISTS idx_items_condition   ON items(condition);
+      CREATE INDEX IF NOT EXISTS idx_items_location    ON items(location);
+
+      -- loans
+      CREATE INDEX IF NOT EXISTS idx_loans_item_id       ON loans(item_id);
+      CREATE INDEX IF NOT EXISTS idx_loans_status        ON loans(status);
+      CREATE INDEX IF NOT EXISTS idx_loans_due_date      ON loans(due_date);
+      CREATE INDEX IF NOT EXISTS idx_loans_borrower_type ON loans(borrower_type);
+      CREATE INDEX IF NOT EXISTS idx_loans_date_borrowed ON loans(date_borrowed);
+
+      -- returns
+      CREATE INDEX IF NOT EXISTS idx_returns_loan_id         ON returns(loan_id);
+      CREATE INDEX IF NOT EXISTS idx_returns_date_returned   ON returns(date_returned);
+      CREATE INDEX IF NOT EXISTS idx_returns_is_damaged      ON returns(is_damaged);
+      CREATE INDEX IF NOT EXISTS idx_returns_damage_reviewed ON returns(damage_reviewed);
+
+      -- audit_log
+      CREATE INDEX IF NOT EXISTS idx_audit_table_name   ON audit_log(table_name);
+      CREATE INDEX IF NOT EXISTS idx_audit_record_id    ON audit_log(record_id);
+      CREATE INDEX IF NOT EXISTS idx_audit_performed_by ON audit_log(performed_by);
+      CREATE INDEX IF NOT EXISTS idx_audit_performed_at ON audit_log(performed_at);
+    `
+  }
+];
+
 /**
  * Run all pending migrations in a transaction.
- * Safe to call on every app launch — already-applied migrations are skipped.
+ * Safe to call on every app launch - already-applied migrations are skipped.
  * @param {Database} db
  */
 function runMigrations(db) {
@@ -161,4 +202,22 @@ function runMigrations(db) {
   console.log('[schema] All migrations complete. Current version:', pending[pending.length - 1].version);
 }
 
-module.exports = { runMigrations };
+/**
+ * Get the currently applied schema version from the database.
+ * Returns 0 if schema_version table doesn't exist yet.
+ * @param {Database} db
+ * @returns {number}
+ */
+function getSchemaVersion(db) {
+  try {
+    const row = db.prepare('SELECT MAX(version) as v FROM schema_version').get();
+    return row && row.v !== null ? row.v : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** The latest schema version defined in MIGRATIONS array */
+const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
+
+module.exports = { runMigrations, getSchemaVersion, SCHEMA_VERSION };
