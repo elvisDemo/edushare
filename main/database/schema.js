@@ -1,4 +1,4 @@
-﻿/**
+/**
  * schema.js - All CREATE TABLE statements for EduShare
  *
  * 7 tables:
@@ -12,6 +12,10 @@
  *
  * ALL primary keys are UUID TEXT - never INTEGER AUTOINCREMENT.
  * Foreign key constraints are enforced (pragma foreign_keys = ON).
+ *
+ * NOTE: available_count is NOT stored. It is always calculated dynamically:
+ *   quantity - (SELECT COALESCE(SUM(quantity_loaned), 0)
+ *               FROM loans WHERE item_id = items.id AND status IN ('active','overdue'))
  */
 
 const MIGRATIONS = [
@@ -52,7 +56,6 @@ const MIGRATIONS = [
         name            TEXT NOT NULL,
         category_id     TEXT REFERENCES categories(id),
         quantity        INTEGER NOT NULL DEFAULT 0,
-        available_count INTEGER NOT NULL DEFAULT 0,
         condition       TEXT CHECK(condition IN ('Good','Fair','Poor','Damaged')),
         serial_number   TEXT,
         asset_tag       TEXT,
@@ -117,8 +120,7 @@ const MIGRATIONS = [
         description TEXT
       );
     `
-  }
-];
+  },
 
   {
     version: 2,
@@ -158,6 +160,78 @@ const MIGRATIONS = [
       CREATE INDEX IF NOT EXISTS idx_audit_performed_by ON audit_log(performed_by);
       CREATE INDEX IF NOT EXISTS idx_audit_performed_at ON audit_log(performed_at);
     `
+  },
+
+  {
+    version: 3,
+    description: 'Remove static available_count column - now calculated dynamically',
+    // SQLite does not support DROP COLUMN in older versions; use table rebuild approach.
+    // We check if the column exists first and only rebuild if needed.
+    migrate: (db) => {
+      const tableInfo = db.prepare("PRAGMA table_info(items)").all();
+      const hasAvailableCount = tableInfo.some(col => col.name === 'available_count');
+
+      if (!hasAvailableCount) {
+        console.log('[schema] v3: available_count column not present - nothing to do.');
+        return;
+      }
+
+      console.log('[schema] v3: Rebuilding items table to remove available_count column...');
+
+      db.transaction(() => {
+        // 1. Create new items table without available_count
+        db.exec(`
+          CREATE TABLE items_new (
+            id              TEXT PRIMARY KEY,
+            name            TEXT NOT NULL,
+            category_id     TEXT REFERENCES categories(id),
+            quantity        INTEGER NOT NULL DEFAULT 0,
+            condition       TEXT CHECK(condition IN ('Good','Fair','Poor','Damaged')),
+            serial_number   TEXT,
+            asset_tag       TEXT,
+            description     TEXT,
+            owner_school    TEXT,
+            location        TEXT,
+            purchase_date   DATE,
+            cost            REAL,
+            image_path      TEXT,
+            is_active       INTEGER DEFAULT 1,
+            created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+            created_by      TEXT,
+            updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_by      TEXT
+          );
+        `);
+
+        // 2. Copy data (excluding available_count)
+        db.exec(`
+          INSERT INTO items_new
+            (id, name, category_id, quantity, condition, serial_number, asset_tag,
+             description, owner_school, location, purchase_date, cost, image_path,
+             is_active, created_at, created_by, updated_at, updated_by)
+          SELECT
+            id, name, category_id, quantity, condition, serial_number, asset_tag,
+            description, owner_school, location, purchase_date, cost, image_path,
+            is_active, created_at, created_by, updated_at, updated_by
+          FROM items;
+        `);
+
+        // 3. Drop old table and rename new one
+        db.exec(`DROP TABLE items;`);
+        db.exec(`ALTER TABLE items_new RENAME TO items;`);
+
+        // 4. Re-create indexes on items (dropped with the old table)
+        db.exec(`
+          CREATE INDEX IF NOT EXISTS idx_items_category_id ON items(category_id);
+          CREATE INDEX IF NOT EXISTS idx_items_is_active   ON items(is_active);
+          CREATE INDEX IF NOT EXISTS idx_items_name        ON items(name);
+          CREATE INDEX IF NOT EXISTS idx_items_condition   ON items(condition);
+          CREATE INDEX IF NOT EXISTS idx_items_location    ON items(location);
+        `);
+      })();
+
+      console.log('[schema] v3: items table rebuilt successfully. available_count removed.');
+    }
   }
 ];
 
@@ -189,13 +263,21 @@ function runMigrations(db) {
 
   for (const migration of pending) {
     console.log(`[schema] Applying migration v${migration.version}: ${migration.description}`);
-    db.transaction(() => {
-      db.exec(migration.sql);
-      db.prepare('INSERT INTO schema_version (version, description) VALUES (?, ?)').run(
-        migration.version,
-        migration.description
-      );
-    })();
+
+    if (migration.migrate) {
+      // Custom migration function (e.g. for table rebuilds)
+      migration.migrate(db);
+    } else {
+      db.transaction(() => {
+        db.exec(migration.sql);
+      })();
+    }
+
+    db.prepare('INSERT INTO schema_version (version, description) VALUES (?, ?)').run(
+      migration.version,
+      migration.description
+    );
+
     console.log(`[schema] Migration v${migration.version} applied.`);
   }
 
@@ -217,7 +299,37 @@ function getSchemaVersion(db) {
   }
 }
 
+/**
+ * Calculate available count for an item dynamically.
+ * NEVER rely on a stored available_count — always call this.
+ * @param {Database} db
+ * @param {string} itemId
+ * @returns {number}
+ */
+function getAvailableCount(db, itemId) {
+  const item = db.prepare('SELECT quantity FROM items WHERE id = ?').get(itemId);
+  if (!item) return 0;
+  const loaned = db.prepare(`
+    SELECT COALESCE(SUM(quantity_loaned), 0) as total
+    FROM loans
+    WHERE item_id = ? AND status IN ('active', 'overdue')
+  `).get(itemId);
+  return item.quantity - loaned.total;
+}
+
+/**
+ * SQL fragment for available_count to use inside SELECT queries on items.
+ * Usage: SELECT items.*, (${AVAILABLE_COUNT_SQL}) as available_count FROM items ...
+ */
+const AVAILABLE_COUNT_SQL = `
+  items.quantity - (
+    SELECT COALESCE(SUM(quantity_loaned), 0)
+    FROM loans
+    WHERE loans.item_id = items.id AND loans.status IN ('active', 'overdue')
+  )
+`.trim();
+
 /** The latest schema version defined in MIGRATIONS array */
 const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
 
-module.exports = { runMigrations, getSchemaVersion, SCHEMA_VERSION };
+module.exports = { runMigrations, getSchemaVersion, getAvailableCount, AVAILABLE_COUNT_SQL, SCHEMA_VERSION };
