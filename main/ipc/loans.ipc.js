@@ -57,8 +57,8 @@ function checkOverdueLoans() {
   return result.changes;
 }
 
-// Run overdue check when this module loads
-checkOverdueLoans();
+// Note: checkOverdueLoans() should be called from main process after database initialization
+// during app startup, not when this module loads.
 
 // ──────────────────────────────────────────────────────────────
 // IPC Handlers

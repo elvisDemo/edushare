@@ -16,10 +16,6 @@ const { registerRecoveryHandlers } = require('./ipc/recovery.ipc');
 const { registerSettingsHandlers } = require('./ipc/settings.ipc');
 const { registerUsersHandlers } = require('./ipc/users.ipc');
 
-// Inventory and loans IPC handlers register immediately when required
-require('./ipc/inventory.ipc');
-require('./ipc/loans.ipc');
-
 let mainWindow;
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
@@ -73,7 +69,10 @@ app.whenReady().then(() => {
   registerRecoveryHandlers();
   registerSettingsHandlers();
   registerUsersHandlers();
-  // Inventory and loans handlers are registered automatically when required above
+  
+  // Inventory and loans IPC handlers register immediately when required
+  require('./ipc/inventory.ipc');
+  require('./ipc/loans.ipc');
 
   console.log('[main] All IPC handlers registered');
 
