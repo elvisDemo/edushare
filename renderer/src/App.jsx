@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import SetupWizard from './pages/SetupWizard'
 import Login from './pages/Login'
+import Dashboard from './pages/Dashboard'
+import Settings from './pages/Settings'
+import { SettingsProvider } from './context/SettingsContext'
 import './App.css'
 
 function App() {
   const [isSetupComplete, setIsSetupComplete] = useState(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -39,8 +44,31 @@ function App() {
     return <SetupWizard onSetupComplete={() => setIsSetupComplete(true)} />
   }
 
-  // If setup is complete, show the login screen
-  return <Login />
+  return (
+    <Router>
+      <SettingsProvider>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/login" element={
+            isAuthenticated ? <Navigate to="/dashboard" /> : <Login onLogin={() => setIsAuthenticated(true)} />
+          } />
+          
+          {/* Protected routes */}
+          <Route path="/dashboard" element={
+            isAuthenticated ? <Dashboard /> : <Navigate to="/login" />
+          } />
+          <Route path="/settings" element={
+            isAuthenticated ? <Settings /> : <Navigate to="/login" />
+          } />
+          
+          {/* Default redirect */}
+          <Route path="/" element={
+            <Navigate to={isAuthenticated ? "/dashboard" : "/login"} />
+          } />
+        </Routes>
+      </SettingsProvider>
+    </Router>
+  )
 }
 
 export default App

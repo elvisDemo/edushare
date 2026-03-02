@@ -1,13 +1,25 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { LogIn, School } from 'lucide-react'
+import { useSettings } from '../context/SettingsContext'
 
-const Login = () => {
+const Login = ({ onLogin }) => {
+  const { settings } = useSettings()
   const [credentials, setCredentials] = useState({
     username: '',
     password: '',
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Update CSS variables when settings change
+  useEffect(() => {
+    if (settings.primary_color) {
+      document.documentElement.style.setProperty('--color-primary', settings.primary_color)
+    }
+    if (settings.secondary_color) {
+      document.documentElement.style.setProperty('--color-secondary', settings.secondary_color)
+    }
+  }, [settings.primary_color, settings.secondary_color])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -17,9 +29,11 @@ const Login = () => {
     try {
       const result = await window.edushareAPI.auth.login(credentials)
       if (result.success) {
-        // Login successful - in a real app, we would set auth state and redirect
+        // Login successful - call onLogin callback
         console.log('Login successful:', result.data)
-        alert('Login successful! (Dashboard not implemented yet)')
+        if (onLogin) {
+          onLogin()
+        }
       } else {
         setError(result.error || 'Login failed')
       }
@@ -33,13 +47,22 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo and Title */}
+        {/* Logo and Title with School Branding */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-            <School className="h-8 w-8 text-blue-600" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4" 
+               style={{ backgroundColor: `${settings.primary_color || '#3B82F6'}20` }}>
+            <School className="h-8 w-8" style={{ color: settings.primary_color || '#3B82F6' }} />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">EduShare</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {settings.school_name || 'EduShare'}
+          </h1>
+          {settings.school_motto && (
+            <p className="text-gray-600 mt-1 italic">"{settings.school_motto}"</p>
+          )}
           <p className="text-gray-600 mt-2">School Inventory Management System</p>
+          {settings.school_address && (
+            <p className="text-gray-500 text-sm mt-1">{settings.school_address}</p>
+          )}
         </div>
 
         {/* Login Card */}
@@ -90,7 +113,11 @@ const Login = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-base font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ 
+                backgroundColor: settings.primary_color || '#3B82F6',
+                '--tw-ring-color': settings.primary_color || '#3B82F6'
+              }}
             >
               <LogIn className="mr-2 h-5 w-5" />
               {isLoading ? 'Signing in...' : 'Sign in'}
@@ -101,7 +128,8 @@ const Login = () => {
             <div className="text-center">
               <a
                 href="#"
-                className="text-sm text-blue-600 hover:text-blue-500"
+                className="text-sm hover:text-blue-500"
+                style={{ color: settings.primary_color || '#3B82F6' }}
                 onClick={(e) => {
                   e.preventDefault()
                   alert('Recovery feature not implemented yet')

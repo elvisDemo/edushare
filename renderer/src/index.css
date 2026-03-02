@@ -15,6 +15,10 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* School Branding CSS Variables - Default values */
+  --color-primary: #3B82F6;
+  --color-secondary: #10B981;
 }
 
 body {
