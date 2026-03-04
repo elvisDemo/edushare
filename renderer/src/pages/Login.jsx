@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { LogIn, School, Globe, Eye, EyeOff, AlertCircle, FileText } from 'lucide-react'
 import { useSettings } from '../context/SettingsContext'
 import { useLanguage } from '../context/LanguageContext'
+import { useAuth } from '../context/AuthContext'
 import RecoveryModal from '../components/ui/RecoveryModal'
 
-const Login = ({ onLogin }) => {
+const Login = () => {
+  const navigate = useNavigate()
   const { t } = useTranslation()
   const { settings } = useSettings()
   const { currentLanguage, toggleLanguage, isEnglish, isSwahili } = useLanguage()
+  const { login, isAuthenticated } = useAuth()
   
   const [credentials, setCredentials] = useState({
     username: '',
@@ -19,6 +23,13 @@ const Login = ({ onLogin }) => {
   const [error, setError] = useState('')
   const [validationErrors, setValidationErrors] = useState({})
   const [showRecoveryModal, setShowRecoveryModal] = useState(false)
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard')
+    }
+  }, [isAuthenticated, navigate])
 
   // Update CSS variables when settings change
   useEffect(() => {
@@ -82,13 +93,11 @@ const Login = ({ onLogin }) => {
     setIsLoading(true)
 
     try {
-      const result = await window.edushareAPI.auth.login(credentials)
+      const result = await login(credentials.username, credentials.password)
       if (result.success) {
-        // Login successful - call onLogin callback
-        console.log('Login successful:', result.data)
-        if (onLogin) {
-          onLogin()
-        }
+        // Login successful - redirect to dashboard
+        console.log('Login successful')
+        navigate('/dashboard')
       } else {
         setError(result.error || t('login.errors.invalidCredentials'))
       }

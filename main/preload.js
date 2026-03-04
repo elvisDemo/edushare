@@ -303,6 +303,23 @@ contextBridge.exposeInMainWorld('edushareAPI', {
      */
     resetPassword: (id, newPassword) => invokeWithErrorHandling('users:resetPassword', id, newPassword),
   },
+
+  // ==================== UTILS ====================
+  utils: {
+    /**
+     * Verify that a file exists and is accessible
+     * @param {string} filePath - Path to file
+     * @returns {Promise<{path: string, size: number, modified: string, readable: boolean}>}
+     */
+    verifyFile: (filePath) => invokeWithErrorHandling('utils:verifyFile', filePath),
+    
+    /**
+     * Read a file as base64
+     * @param {string} filePath - Path to file
+     * @returns {Promise<string>} - Base64 encoded file content
+     */
+    readFileAsBase64: (filePath) => invokeWithErrorHandling('utils:readFileAsBase64', filePath),
+  },
 });
 
 // TypeScript support: expose type declarations

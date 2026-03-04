@@ -14,6 +14,7 @@ const { app } = require('electron');
 const { runMigrations } = require('./schema');
 
 let db = null;
+let DB_PATH = null;
 
 /**
  * Initialize the database connection.
@@ -25,6 +26,7 @@ function initDatabase() {
 
   const userDataPath = app.getPath('userData');
   const dbPath = path.join(userDataPath, 'edushare.db');
+  DB_PATH = dbPath;
 
   console.log('[db] userData path:', userDataPath);
   console.log('[db] database path:', dbPath);
@@ -63,6 +65,38 @@ function getDatabase() {
   return db;
 }
 
+// Alias for backward compatibility with existing IPC files
+const getDb = getDatabase;
+
+/**
+ * Audit log helper — records every write action
+ * Centralized to avoid duplication across IPC files
+ */
+function auditLog(action, table, recordId, oldValues, newValues, performedBy) {
+  if (!db) {
+    console.error('[auditLog] Database not initialized');
+    return;
+  }
+  
+  const { v4: uuidv4 } = require('uuid');
+  try {
+    db.prepare(`
+      INSERT INTO audit_log (id, action, table_name, record_id, old_values, new_values, performed_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      uuidv4(),
+      action,
+      table,
+      recordId,
+      oldValues ? JSON.stringify(oldValues) : null,
+      newValues ? JSON.stringify(newValues) : null,
+      performedBy || 'system'
+    );
+  } catch (err) {
+    console.error('[auditLog] Failed to log:', err);
+  }
+}
+
 /**
  * Close the database connection gracefully.
  * Should be called on app 'before-quit'.
@@ -75,4 +109,4 @@ function closeDatabase() {
   }
 }
 
-module.exports = { initDatabase, getDatabase, closeDatabase };
+module.exports = { initDatabase, getDatabase, getDb, closeDatabase, auditLog, DB_PATH };

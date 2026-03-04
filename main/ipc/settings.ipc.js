@@ -1,11 +1,11 @@
 const { ipcMain } = require('electron');
-const { getDb, auditLog } = require('../database/db');
+const { getDatabase, auditLog } = require('../database/db');
 const { getCurrentUser } = require('./auth.ipc');
 
 const registerSettingsHandlers = () => {
   ipcMain.handle('settings:get', async (event, key) => {
     try {
-      const row = getDb().prepare('SELECT value FROM settings WHERE key = ?').get(key);
+      const row = getDatabase().prepare('SELECT value FROM settings WHERE key = ?').get(key);
       return { success: true, data: row ? row.value : null };
     } catch (err) {
       console.error('[settings:get]', err);
@@ -16,7 +16,7 @@ const registerSettingsHandlers = () => {
   ipcMain.handle('settings:set', async (event, key, value) => {
     try {
       const user = getCurrentUser();
-      const db = getDb();
+      const db = getDatabase();
       const existing = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
 
       db.prepare(`
@@ -34,7 +34,7 @@ const registerSettingsHandlers = () => {
 
   ipcMain.handle('settings:getAll', async () => {
     try {
-      const rows = getDb().prepare('SELECT key, value FROM settings').all();
+      const rows = getDatabase().prepare('SELECT key, value FROM settings').all();
       const settings = {};
       rows.forEach(r => { settings[r.key] = r.value; });
       return { success: true, data: settings };
@@ -46,7 +46,7 @@ const registerSettingsHandlers = () => {
 
   ipcMain.handle('settings:isSetupComplete', async () => {
     try {
-      const row = getDb().prepare("SELECT value FROM settings WHERE key = 'setup_complete'").get();
+      const row = getDatabase().prepare("SELECT value FROM settings WHERE key = 'setup_complete'").get();
       return { success: true, data: row?.value === 'true' };
     } catch (err) {
       console.error('[settings:isSetupComplete]', err);

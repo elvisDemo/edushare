@@ -1,10 +1,10 @@
 const { ipcMain } = require('electron');
-const { getDb } = require('../database/db');
+const { getDatabase } = require('../database/db');
 
 const registerReportsHandlers = () => {
   ipcMain.handle('reports:generate', async (event, type, filters = {}) => {
     try {
-      const db = getDb();
+      const db = getDatabase();
       let data;
 
       switch (type) {

@@ -1,27 +1,55 @@
 import { useState } from 'react'
-import { Menu, X, Bell, User, Settings, LogOut } from 'lucide-react'
+import { Menu, X, Bell, User, Settings, LogOut, Home, Package, BookOpen, RefreshCw, BarChart, Users, Shield, Database } from 'lucide-react'
 import { useSettings } from '../../context/SettingsContext'
+import { useAuth } from '../../context/AuthContext'
 
 const Header = () => {
   const { settings } = useSettings()
+  const { user, logout } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
 
-  // Mock user data - will be replaced with actual auth context
-  const currentUser = {
-    name: 'John Doe',
-    role: 'School Admin',
-    avatar: null,
+  // Define navigation items based on user role
+  const getNavigationItems = () => {
+    const baseItems = [
+      { name: 'Dashboard', href: '/dashboard', icon: Home, current: true },
+    ]
+
+    if (!user) return baseItems
+
+    // Common items for all authenticated users
+    const commonItems = [
+      { name: 'Inventory', href: '#', icon: Package, permission: 'inventory.read' },
+      { name: 'Loans', href: '#', icon: BookOpen, permission: 'loans.read' },
+      { name: 'Returns', href: '#', icon: RefreshCw, permission: 'returns.read' },
+      { name: 'Reports', href: '#', icon: BarChart, permission: 'reports.read' },
+    ]
+
+    // Role-specific items
+    const roleSpecificItems = []
+    
+    if (user.role === 'super_admin') {
+      roleSpecificItems.push(
+        { name: 'Users', href: '#', icon: Users, permission: 'users.read' },
+        { name: 'System', href: '#', icon: Shield, permission: 'system.*' },
+        { name: 'Backup', href: '#', icon: Database, permission: 'backup.*' }
+      )
+    }
+
+    if (user.role === 'school_admin') {
+      roleSpecificItems.push(
+        { name: 'Users', href: '#', icon: Users, permission: 'users.read' },
+        { name: 'Backup', href: '#', icon: Database, permission: 'backup.*' }
+      )
+    }
+
+    // Settings is available for all authenticated users
+    const settingsItem = { name: 'Settings', href: '#', icon: Settings }
+
+    return [...baseItems, ...commonItems, ...roleSpecificItems, settingsItem]
   }
 
-  const navigation = [
-    { name: 'Dashboard', href: '#', current: true },
-    { name: 'Inventory', href: '#', current: false },
-    { name: 'Loans', href: '#', current: false },
-    { name: 'Returns', href: '#', current: false },
-    { name: 'Reports', href: '#', current: false },
-    { name: 'Settings', href: '#', current: false },
-  ]
+  const navigation = getNavigationItems()
 
   return (
     <header className="bg-white shadow">
@@ -107,15 +135,17 @@ const Header = () => {
                 >
                   <span className="sr-only">Open user menu</span>
                   <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-                    {currentUser.avatar ? (
-                      <img className="h-8 w-8 rounded-full" src={currentUser.avatar} alt="" />
+                    {user?.avatar ? (
+                      <img className="h-8 w-8 rounded-full" src={user.avatar} alt="" />
                     ) : (
                       <User className="h-5 w-5 text-gray-500" />
                     )}
                   </div>
                   <div className="ml-2 hidden md:block text-left">
-                    <p className="text-sm font-medium text-gray-700">{currentUser.name}</p>
-                    <p className="text-xs text-gray-500">{currentUser.role}</p>
+                    <p className="text-sm font-medium text-gray-700">{user?.full_name || 'User'}</p>
+                    <p className="text-xs text-gray-500">
+                      {user?.role ? user.role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'No Role'}
+                    </p>
                   </div>
                 </button>
               </div>
@@ -148,16 +178,16 @@ const Header = () => {
                       Settings
                     </div>
                   </a>
-                  <a
-                    href="#"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  <button
+                    onClick={logout}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     role="menuitem"
                   >
                     <div className="flex items-center">
                       <LogOut className="mr-3 h-4 w-4 text-gray-400" />
                       Sign out
                     </div>
-                  </a>
+                  </button>
                 </div>
               )}
             </div>

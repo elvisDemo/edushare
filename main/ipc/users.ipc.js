@@ -1,5 +1,5 @@
 const { ipcMain } = require('electron');
-const { getDb, auditLog } = require('../database/db');
+const { getDatabase, auditLog } = require('../database/db');
 const { getCurrentUser } = require('./auth.ipc');
 const { v4: uuidv4 } = require('uuid');
 
@@ -24,7 +24,7 @@ const registerUsersHandlers = () => {
       const user = getCurrentUser();
       if (!can(user, 'users.*')) return { success: false, error: 'Unauthorized' };
       // Never return password_hash
-      const users = getDb().prepare(
+      const users = getDatabase().prepare(
         'SELECT id, username, full_name, role, is_active, created_at, last_login FROM users ORDER BY full_name'
       ).all();
       return { success: true, data: users };
@@ -40,7 +40,7 @@ const registerUsersHandlers = () => {
       const id = uuidv4();
       const hash = await bcrypt.hash(data.password, 12);
       const caller = getCurrentUser();
-      getDb().prepare(`
+      getDatabase().prepare(`
         INSERT INTO users (id, username, password_hash, full_name, role, created_by)
         VALUES (?, ?, ?, ?, ?, ?)
       `).run(id, data.username, hash, data.full_name, data.role, caller?.username || 'setup');
@@ -56,8 +56,8 @@ const registerUsersHandlers = () => {
     try {
       const user = getCurrentUser();
       if (!can(user, 'users.*')) return { success: false, error: 'Unauthorized' };
-      const old = getDb().prepare('SELECT id, username, full_name, role FROM users WHERE id = ?').get(id);
-      getDb().prepare('UPDATE users SET full_name = ?, role = ? WHERE id = ?').run(data.full_name, data.role, id);
+      const old = getDatabase().prepare('SELECT id, username, full_name, role FROM users WHERE id = ?').get(id);
+      getDatabase().prepare('UPDATE users SET full_name = ?, role = ? WHERE id = ?').run(data.full_name, data.role, id);
       auditLog('UPDATE', 'users', id, old, data, user?.username);
       return { success: true };
     } catch (err) {
@@ -71,7 +71,7 @@ const registerUsersHandlers = () => {
       const user = getCurrentUser();
       if (!can(user, 'users.*')) return { success: false, error: 'Unauthorized' };
       if (user.id === id) return { success: false, error: 'Cannot deactivate yourself' };
-      getDb().prepare('UPDATE users SET is_active = 0 WHERE id = ?').run(id);
+      getDatabase().prepare('UPDATE users SET is_active = 0 WHERE id = ?').run(id);
       auditLog('DEACTIVATE', 'users', id, null, { is_active: 0 }, user?.username);
       return { success: true };
     } catch (err) {
@@ -86,7 +86,7 @@ const registerUsersHandlers = () => {
       if (!can(user, 'users.*')) return { success: false, error: 'Unauthorized' };
       const bcrypt = require('bcrypt');
       const hash = await bcrypt.hash(newPassword, 12);
-      getDb().prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, id);
+      getDatabase().prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, id);
       auditLog('RESET_PASSWORD', 'users', id, null, { note: 'password reset by admin' }, user?.username);
       return { success: true };
     } catch (err) {

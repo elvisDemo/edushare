@@ -7,12 +7,15 @@ import Dashboard from './pages/Dashboard'
 import Settings from './pages/Settings'
 import { SettingsProvider } from './context/SettingsContext'
 import { LanguageProvider } from './context/LanguageContext'
+import { AuthProvider } from './context/AuthContext'
+import ProtectedRoute from './components/layout/ProtectedRoute'
+import Sidebar from './components/layout/Sidebar'
+import Header from './components/layout/Header'
 import i18n from './i18n'
 import './App.css'
 
 function App() {
   const [isSetupComplete, setIsSetupComplete] = useState(null)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -52,25 +55,139 @@ function App() {
       <Router>
         <SettingsProvider>
           <LanguageProvider>
-            <Routes>
-              {/* Public routes */}
-              <Route path="/login" element={
-                isAuthenticated ? <Navigate to="/dashboard" /> : <Login onLogin={() => setIsAuthenticated(true)} />
-              } />
-              
-              {/* Protected routes */}
-              <Route path="/dashboard" element={
-                isAuthenticated ? <Dashboard /> : <Navigate to="/login" />
-              } />
-              <Route path="/settings" element={
-                isAuthenticated ? <Settings /> : <Navigate to="/login" />
-              } />
-              
-              {/* Default redirect */}
-              <Route path="/" element={
-                <Navigate to={isAuthenticated ? "/dashboard" : "/login"} />
-              } />
-            </Routes>
+            <AuthProvider>
+              <Routes>
+                {/* Public routes */}
+                <Route path="/login" element={<Login />} />
+                
+                {/* Protected routes */}
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/inventory" element={
+                  <ProtectedRoute requiredPermissions={['inventory.read']}>
+                    <div className="min-h-screen bg-gray-50 flex">
+                      <Sidebar />
+                      <div className="flex-1 flex flex-col">
+                        <Header />
+                        <main className="flex-1 p-6">
+                          <div className="max-w-7xl mx-auto">
+                            <h1 className="text-2xl font-bold text-gray-900">Inventory Management</h1>
+                            <p className="text-gray-600 mt-2">Coming soon...</p>
+                          </div>
+                        </main>
+                      </div>
+                    </div>
+                  </ProtectedRoute>
+                } />
+                <Route path="/loans" element={
+                  <ProtectedRoute requiredPermissions={['loans.read']}>
+                    <div className="min-h-screen bg-gray-50 flex">
+                      <Sidebar />
+                      <div className="flex-1 flex flex-col">
+                        <Header />
+                        <main className="flex-1 p-6">
+                          <div className="max-w-7xl mx-auto">
+                            <h1 className="text-2xl font-bold text-gray-900">Loans Management</h1>
+                            <p className="text-gray-600 mt-2">Coming soon...</p>
+                          </div>
+                        </main>
+                      </div>
+                    </div>
+                  </ProtectedRoute>
+                } />
+                <Route path="/returns" element={
+                  <ProtectedRoute requiredPermissions={['returns.read']}>
+                    <div className="min-h-screen bg-gray-50 flex">
+                      <Sidebar />
+                      <div className="flex-1 flex flex-col">
+                        <Header />
+                        <main className="flex-1 p-6">
+                          <div className="max-w-7xl mx-auto">
+                            <h1 className="text-2xl font-bold text-gray-900">Returns Management</h1>
+                            <p className="text-gray-600 mt-2">Coming soon...</p>
+                          </div>
+                        </main>
+                      </div>
+                    </div>
+                  </ProtectedRoute>
+                } />
+                <Route path="/reports" element={
+                  <ProtectedRoute requiredPermissions={['reports.read']}>
+                    <div className="min-h-screen bg-gray-50 flex">
+                      <Sidebar />
+                      <div className="flex-1 flex flex-col">
+                        <Header />
+                        <main className="flex-1 p-6">
+                          <div className="max-w-7xl mx-auto">
+                            <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
+                            <p className="text-gray-600 mt-2">Coming soon...</p>
+                          </div>
+                        </main>
+                      </div>
+                    </div>
+                  </ProtectedRoute>
+                } />
+                <Route path="/users" element={
+                  <ProtectedRoute requiredPermissions={['users.read']}>
+                    <div className="min-h-screen bg-gray-50 flex">
+                      <Sidebar />
+                      <div className="flex-1 flex flex-col">
+                        <Header />
+                        <main className="flex-1 p-6">
+                          <div className="max-w-7xl mx-auto">
+                            <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
+                            <p className="text-gray-600 mt-2">Coming soon...</p>
+                          </div>
+                        </main>
+                      </div>
+                    </div>
+                  </ProtectedRoute>
+                } />
+                <Route path="/system" element={
+                  <ProtectedRoute requiredPermissions={['system.*']}>
+                    <div className="min-h-screen bg-gray-50 flex">
+                      <Sidebar />
+                      <div className="flex-1 flex flex-col">
+                        <Header />
+                        <main className="flex-1 p-6">
+                          <div className="max-w-7xl mx-auto">
+                            <h1 className="text-2xl font-bold text-gray-900">System Settings</h1>
+                            <p className="text-gray-600 mt-2">Coming soon...</p>
+                          </div>
+                        </main>
+                      </div>
+                    </div>
+                  </ProtectedRoute>
+                } />
+                <Route path="/backup" element={
+                  <ProtectedRoute requiredPermissions={['backup.*']}>
+                    <div className="min-h-screen bg-gray-50 flex">
+                      <Sidebar />
+                      <div className="flex-1 flex flex-col">
+                        <Header />
+                        <main className="flex-1 p-6">
+                          <div className="max-w-7xl mx-auto">
+                            <h1 className="text-2xl font-bold text-gray-900">Backup & Restore</h1>
+                            <p className="text-gray-600 mt-2">Coming soon...</p>
+                          </div>
+                        </main>
+                      </div>
+                    </div>
+                  </ProtectedRoute>
+                } />
+                <Route path="/settings" element={
+                  <ProtectedRoute>
+                    <Settings />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Default redirect */}
+                <Route path="/" element={<Navigate to="/dashboard" />} />
+              </Routes>
+            </AuthProvider>
           </LanguageProvider>
         </SettingsProvider>
       </Router>

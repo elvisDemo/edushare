@@ -16,28 +16,9 @@
  */
 
 const { ipcMain } = require('electron');
-const { getDatabase } = require('../database/db');
+const { getDatabase, auditLog } = require('../database/db');
 const { getAvailableCount, AVAILABLE_COUNT_SQL } = require('../database/schema');
 const { v4: uuidv4 } = require('uuid');
-
-/**
- * Audit log helper — records every write action
- */
-function auditLog(action, table, recordId, oldValues, newValues, performedBy) {
-  const db = getDatabase();
-  db.prepare(`
-    INSERT INTO audit_log (id, action, table_name, record_id, old_values, new_values, performed_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    uuidv4(),
-    action,
-    table,
-    recordId,
-    JSON.stringify(oldValues),
-    JSON.stringify(newValues),
-    performedBy
-  );
-}
 
 /**
  * Permission check helper

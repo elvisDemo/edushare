@@ -1,5 +1,5 @@
 const { ipcMain } = require('electron');
-const { getDb, auditLog } = require('../database/db');
+const { getDatabase, auditLog } = require('../database/db');
 
 // In-memory session store (cleared on app exit)
 let currentUser = null;
@@ -10,7 +10,7 @@ const registerAuthHandlers = () => {
   ipcMain.handle('auth:login', async (event, { username, password }) => {
     try {
       const bcrypt = require('bcrypt');
-      const db = getDb();
+      const db = getDatabase();
 
       const user = db.prepare(
         'SELECT * FROM users WHERE username = ? AND is_active = 1'
@@ -71,7 +71,7 @@ const registerAuthHandlers = () => {
     try {
       if (!currentUser) return { success: false, error: 'Not authenticated' };
       const bcrypt = require('bcrypt');
-      const db = getDb();
+      const db = getDatabase();
 
       const user = db.prepare('SELECT * FROM users WHERE id = ?').get(currentUser.id);
       const match = await bcrypt.compare(currentPassword, user.password_hash);

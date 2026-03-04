@@ -17,7 +17,7 @@ const SetupWizard = ({ onSetupComplete }) => {
     confirmPassword: '',
     fullName: '',
   })
-  const [recoveryFileSaved, setRecoveryFileSaved] = useState(false)
+  const [recoveryFileInfo, setRecoveryFileInfo] = useState({ saved: false, filePath: null, error: null })
   const [isSaving, setIsSaving] = useState(false)
   const [errors, setErrors] = useState({})
 
@@ -51,7 +51,13 @@ const SetupWizard = ({ onSetupComplete }) => {
     }
 
     if (step === 4) {
-      if (!recoveryFileSaved) newErrors.recoveryFile = 'You must save the recovery file to continue'
+      if (!recoveryFileInfo.saved) {
+        newErrors.recoveryFile = 'You must save the recovery file to continue'
+      } else if (recoveryFileInfo.error) {
+        newErrors.recoveryFile = recoveryFileInfo.error
+      }
+      // Note: We trust the IPC handler that created the file
+      // If the user deletes it after generation, that's their responsibility
     }
 
     setErrors(newErrors)
@@ -77,12 +83,14 @@ const SetupWizard = ({ onSetupComplete }) => {
       setIsSaving(true)
       const result = await window.edushareAPI.recovery.generate()
       if (result.success) {
-        setRecoveryFileSaved(true)
+        setRecoveryFileInfo({ saved: true, filePath: result.filePath, error: null })
         setErrors({ ...errors, recoveryFile: undefined })
       } else {
+        setRecoveryFileInfo({ saved: false, filePath: null, error: result.error })
         setErrors({ ...errors, recoveryFile: result.error })
       }
     } catch (error) {
+      setRecoveryFileInfo({ saved: false, filePath: null, error: error.message })
       setErrors({ ...errors, recoveryFile: error.message })
     } finally {
       setIsSaving(false)
@@ -92,6 +100,26 @@ const SetupWizard = ({ onSetupComplete }) => {
   const handleCompleteSetup = async () => {
     try {
       setIsSaving(true)
+
+      // Verify recovery file exists before proceeding
+      if (recoveryFileInfo.saved && recoveryFileInfo.filePath) {
+        try {
+          // Use IPC to verify file exists and is accessible
+          const verification = await window.edushareAPI.utils.verifyFile(recoveryFileInfo.filePath);
+          if (!verification.success) {
+            throw new Error(`Recovery file verification failed: ${verification.error}`);
+          }
+          console.log('[SetupWizard] Recovery file verified:', verification.data);
+        } catch (fileError) {
+          setErrors({ ...errors, submit: `${fileError.message}. Please regenerate the recovery file.` });
+          setIsSaving(false);
+          return;
+        }
+      } else {
+        setErrors({ ...errors, submit: 'Recovery file is required to complete setup' });
+        setIsSaving(false);
+        return;
+      }
 
       // Save language
       await window.edushareAPI.settings.set('language', language)
@@ -334,12 +362,15 @@ const SetupWizard = ({ onSetupComplete }) => {
                 <li>• Recover access to the system</li>
               </ul>
               
-              {recoveryFileSaved ? (
+              {recoveryFileInfo.saved ? (
                 <div className="bg-green-50 border border-green-200 rounded-md p-4">
                   <div className="flex items-center justify-center space-x-2 text-green-700">
                     <CheckCircle className="h-5 w-5" />
                     <span className="font-medium">Recovery file saved successfully!</span>
                   </div>
+                  <p className="text-green-600 text-sm mt-2">
+                    File saved to: <code className="bg-green-100 px-2 py-1 rounded text-xs">{recoveryFileInfo.filePath}</code>
+                  </p>
                   <p className="text-green-600 text-sm mt-2">
                     Please keep the USB drive in a secure location. You can now continue.
                   </p>
@@ -402,7 +433,7 @@ const SetupWizard = ({ onSetupComplete }) => {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Recovery File:</span>
                   <span className="font-medium text-green-600">
-                    {recoveryFileSaved ? 'Saved ✓' : 'Not Saved ✗'}
+                    {recoveryFileInfo.saved ? 'Saved ✓' : 'Not Saved ✗'}
                   </span>
                 </div>
               </div>
@@ -498,7 +529,7 @@ const SetupWizard = ({ onSetupComplete }) => {
             <button
               type="button"
               onClick={handleCompleteSetup}
-              disabled={isSaving || !recoveryFileSaved}
+              disabled={isSaving || !recoveryFileInfo.saved}
               className="px-6 py-2 bg-green-600 border border-transparent rounded-md text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving ? 'Completing...' : 'Complete Setup'}

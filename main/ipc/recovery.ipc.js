@@ -1,10 +1,10 @@
 const { ipcMain } = require('electron');
-const { getDb, auditLog } = require('../database/db');
+const { getDatabase, auditLog } = require('../database/db');
 const crypto = require('crypto');
 const fs = require('fs');
 
 const getInstallationId = () => {
-  const db = getDb();
+  const db = getDatabase();
   let row = db.prepare("SELECT value FROM settings WHERE key = 'installation_id'").get();
   if (!row) {
     const id = crypto.randomUUID();
@@ -18,7 +18,7 @@ const registerRecoveryHandlers = () => {
   ipcMain.handle('recovery:generate', async (event) => {
     try {
       const { dialog, BrowserWindow } = require('electron');
-      const db = getDb();
+      const db = getDatabase();
       const installId = getInstallationId();
       const token = crypto.randomBytes(32).toString('hex');
       const sig = crypto.createHmac('sha256', installId).update(token).digest('hex');
@@ -45,7 +45,20 @@ const registerRecoveryHandlers = () => {
       });
 
       if (result.canceled) return { success: false, error: 'Cancelled' };
+      
+      // Write file
       fs.writeFileSync(result.filePath, fileContent);
+      
+      // Verify file was written successfully
+      if (!fs.existsSync(result.filePath)) {
+        return { success: false, error: 'Failed to save recovery file' };
+      }
+      
+      const stats = fs.statSync(result.filePath);
+      if (stats.size === 0) {
+        return { success: false, error: 'Recovery file is empty' };
+      }
+      
       return { success: true, filePath: result.filePath };
     } catch (err) {
       console.error('[recovery:generate]', err);
@@ -57,7 +70,7 @@ const registerRecoveryHandlers = () => {
     try {
       const { v4: uuidv4 } = require('uuid');
       const bcrypt = require('bcrypt');
-      const db = getDb();
+      const db = getDatabase();
       const installId = getInstallationId();
 
       // Handle both file path and base64 data
