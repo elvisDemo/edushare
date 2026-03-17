@@ -53,15 +53,21 @@ const registerRecoveryHandlers = () => {
     }
   });
 
-  ipcMain.handle('recovery:reset', async (event, { recoveryFilePath, newPassword }) => {
+  ipcMain.handle('recovery:reset', async (event, { recoveryData, newPassword }) => {
     try {
       const { v4: uuidv4 } = require('uuid');
       const bcrypt = require('bcrypt');
       const db = getDb();
       const installId = getInstallationId();
 
-      const fileContent = fs.readFileSync(recoveryFilePath, 'utf8');
-      const payload = JSON.parse(Buffer.from(fileContent, 'base64').toString('utf8'));
+      // Handle both file path and base64 data
+      let payload;
+      if (recoveryData) {
+        // Assume it's base64 data
+        payload = JSON.parse(Buffer.from(recoveryData, 'base64').toString('utf8'));
+      } else {
+        return { success: false, error: 'No recovery data provided' };
+      }
 
       if (payload.installationId !== installId) {
         return { success: false, error: 'Recovery file is not for this installation' };
@@ -80,9 +86,11 @@ const registerRecoveryHandlers = () => {
         return { success: false, error: 'Recovery token already used or invalid' };
       }
 
-      // Reset Super Admin password
-      const hash = await bcrypt.hash(newPassword, 12);
-      const superAdmin = db.prepare("SELECT id FROM users WHERE role = 'super_admin' LIMIT 1").get();
+      // For login screen recovery, we need to reset the Super Admin password
+      // Generate a random password and return it to the user
+      const randomPassword = crypto.randomBytes(12).toString('hex');
+      const hash = await bcrypt.hash(randomPassword, 12);
+      const superAdmin = db.prepare("SELECT id, username FROM users WHERE role = 'super_admin' LIMIT 1").get();
       if (!superAdmin) return { success: false, error: 'No Super Admin found' };
 
       db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, superAdmin.id);
@@ -91,7 +99,14 @@ const registerRecoveryHandlers = () => {
       db.prepare("UPDATE settings SET value = 'USED' WHERE key = 'recovery_token_hash'").run();
 
       auditLog('RECOVERY_RESET', 'users', superAdmin.id, null, { note: 'password reset via recovery file' }, 'recovery');
-      return { success: true };
+      
+      return { 
+        success: true, 
+        data: {
+          username: superAdmin.username,
+          password: randomPassword
+        }
+      };
     } catch (err) {
       console.error('[recovery:reset]', err);
       return { success: false, error: err.message };
